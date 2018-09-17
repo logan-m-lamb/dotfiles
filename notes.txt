@@ -1,0 +1,13 @@
+don't forget xxe
+
+injection - javascript, html, dom, css, etc
+xss - reflected, persistent
+broken auth - cookies, login (secure flag, http only)
+insecure direct object reference
+csrf
+security misconfiguration - directory browsing, get for post?, check versions
+of software
+insecure crypto storage
+failure to restrict url access, robots.txt, random admin panels
+insufficient transport layer protection
+unvalidated redirects and forwards
